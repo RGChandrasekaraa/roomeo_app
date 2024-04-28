@@ -1,18 +1,58 @@
 import bcrypt from 'bcrypt';
+import prisma from '../lib/prisma.js';
 
 export const register = async (req, res) => {
     const { username, email, password } = req.body;
-    // Hash password
-    const hashedPassword = await bcrypt.hash(password, 10);
-    
-    console.log(hashedPassword);
-    
 
+    try {
+        // Hash password
+        const hashedPassword = await bcrypt.hash(password, 10);
+        console.log(hashedPassword);  
+        // Save user to database
+        const newUser = await prisma.user.create({
+            data: {
+                username,
+                email,
+                password: hashedPassword,
+            },
+        });   
+        console.log(newUser);    
+        res.status(201).json({ message: 'User created' })   ; 
+    }
+    catch (error) {
+        console.log(error)
+        res.status(500).json({ message: 'Error creating user' });
+    }  
 }
 
-export const login = (req, res) => {
-    res.send('Login page');
-}
+export const login = async (req, res) => {
+    const { username, password } = req.body;
+    
+    try {
+        // Find user in database
+        const user = await prisma.user.findUnique({
+            where: { username: username }
+        })
+        // Check if user exists
+        if (!user) {
+            return res.status(401).json({ message: 'invalid credential ' });
+        }
+        // Check if password is valid
+        const isPasswordValid = await bcrypt.compare(password, user.password);  
+        if (!isPasswordValid) {
+            return res.status(401).json({ message: 'invalid credential ' });
+        }
+         
+
+
+    }
+
+
+    catch (error) {
+        console.log(error)
+        res.status(500).json({ message: 'Error logging in' });
+    }
+    } 
 
 export const logout = (req, res) => {
     res.send('Logout page');
